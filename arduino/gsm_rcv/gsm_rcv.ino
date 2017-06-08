@@ -7,7 +7,8 @@
  
 /*Author: Gustavo Diaz Huenupan*/
 
-#include <SoftwareSerial.h>   // Incluimos la libreria  SoftwareSerial  
+#include <SoftwareSerial.h>   // Incluimos la libreria  SoftwareSerial
+#include <LiquidCrystal.h>
 
 #define MBED_LED 13
 #define R_LED 12
@@ -42,7 +43,8 @@ char init_ready_cmd[] = "+CIEV: service,  1";
 /* this command is received when the GSM service is available on de module (it has signal)*/
 
 /* Variable definitions*/ 
-SoftwareSerial Debugger(8,7);    // Define RX & TX pin on Arduino conected to a serial debuger
+SoftwareSerial Debugger(7,6);    // Define RX & TX pin on Arduino conected to a serial debuger
+LiquidCrystal lcd(9, 8, A3, A2, A1, A0);
 char chr;
 char last_word[WORD_SIZE];
 char comands[COMANDS_SIZE][WORD_SIZE];
@@ -74,6 +76,8 @@ void setup()
   pinMode(BUZZER, OUTPUT);
   digitalWrite(MBED_LED, LOW);
   set_led('R');
+  lcd.begin(16, 1);
+  // lcd.clear();
   /*init variables*/
   init_ready = 0;
   char_cnt = 0;
@@ -81,6 +85,7 @@ void setup()
   msg_cnt = 0;
   msg_received = 0;
   Debugger.println("Init Ready");
+  lcd.print("SEARCH..");
 }
  
 void loop()
@@ -115,6 +120,7 @@ void read_response(void)
     if(last_word[0]!='\r' & last_word[0]!='\n' & last_word[0]!=0) add_cmd(last_word, char_cnt);
     if (strcmp(last_word, init_ready_cmd)==0)
     {
+      lcd.print("CONFIG..");
       init_ready = 1;
       set_led('B');
       Debugger.println("Setting text mode ...");
@@ -126,6 +132,7 @@ void read_response(void)
       Debugger.println("Ready to receive sms");
       digitalWrite(MBED_LED, HIGH);
       set_led('K');
+      lcd.print("READY!");
     }
     if (strcmp(last_word, in_msg_cmd)==0) msg_received = 1;
     if (msg_received & last_word[0]!='+' & last_word[0]!='^' & last_word[0]!='\n' & last_word[0]!='\r' & last_word[0]!=0 & last_word[0]=='*')
@@ -136,7 +143,9 @@ void read_response(void)
       set_led('G');
       add_msg(last_word, char_cnt);
       msg_received = 0;
-      uint8_t n = last_word[1]-'0';
+      // uint8_t n = last_word[1]-'0';
+      uint8_t n =(char_cnt<=8)?char_cnt:8;
+      lcd.print(last_word);
       beeps(n, 500);
       set_led('K');
     }
