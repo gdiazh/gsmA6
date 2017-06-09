@@ -4,8 +4,8 @@
  
 void setup()
 {
-  Serial1.begin(9600);   // Conected to Arduino Nano (receive/send data from/to GSM driver)
-  Serial.begin(9600);   // PC debugger
+  Serial1.begin(115200);   // Conected to Arduino Nano (receive/send data from/to GSM driver)
+  Serial.begin(115200);   // PC debugger
 }
  
 void loop()
@@ -14,8 +14,8 @@ void loop()
   {
     Serial.write(Serial1.read());
   }
-  if(Serial.available())
+  /*if(Serial.available())
   {
     Serial1.write(Serial.read());
-  }
+  }*/
 }

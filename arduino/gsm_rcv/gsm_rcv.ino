@@ -43,9 +43,10 @@ char init_ready_cmd[] = "+CIEV: service,  1";
 /* this command is received when the GSM service is available on de module (it has signal)*/
 
 /* Variable definitions*/ 
-SoftwareSerial Debugger(7,6);    // Define RX & TX pin on Arduino conected to a serial debuger
+SoftwareSerial Debugger(7,6);    // Define RX && TX pin on Arduino conected to a serial debuger
 LiquidCrystal lcd(9, 8, A3, A2, A1, A0);
 char chr;
+char chr0;
 char last_word[WORD_SIZE];
 char comands[COMANDS_SIZE][WORD_SIZE];
 char messages[MESSGES_SIZE][WORD_SIZE];
@@ -68,7 +69,7 @@ void set_led(char rgb);
 void setup()
 {
   Serial.begin(115200);   // GSM
-  Debugger.begin(9600);
+  Debugger.begin(115200);
   pinMode(MBED_LED, OUTPUT);
   pinMode(R_LED, OUTPUT);
   pinMode(G_LED, OUTPUT);
@@ -79,6 +80,8 @@ void setup()
   lcd.begin(16, 1);
   // lcd.clear();
   /*init variables*/
+  chr = 0;
+  chr0 = 0;
   init_ready = 0;
   char_cnt = 0;
   word_cnt = 0;
@@ -93,18 +96,31 @@ void loop()
   while(Serial.available())    // Si llega un dato por el puerto GSM6 se envía al debugger
   {
     read_response();
+    /*char foo = Serial.read();
+    Debugger.print(foo);*/
   }
-  if(Debugger.available())  // Si llega un dato por el debugger se envía al puerto GSM6
+  /*if(Debugger.available())  // Si llega un dato por el debugger se envía al puerto GSM6
   {
     Serial.write(Debugger.read());
-  }
+  }*/
 }
 
 void read_response(void)
 {
-  char chr = Serial.read();
-  // Debugger.print("chr = "); Debugger.println(chr, DEC);
-  if (chr != '\r' and chr != '\n')
+  chr0 = chr;
+  chr = Serial.read();
+  // char debug_msg_chr[6] = "chr= ";
+  // debug_msg_chr[4] = chr;
+  // Debugger.write(aux_chr);
+  // Debugger.print("chr = "); Debugger.print(aux_chr, DEC); Debugger.println("|");
+  // Debugger.println(debug_msg_chr);
+  // Debugger.print("chr = "); Debugger.println(chr); //Debugger.println("|");
+  if (msg_received)
+  {
+  	Debugger.print("chr = "); 
+  	Debugger.println(chr);
+  }
+  if (chr != '\r' && chr != '\n')
   {
     last_word[char_cnt] = chr;
     char_cnt++;
@@ -112,14 +128,15 @@ void read_response(void)
   if (char_cnt == WORD_SIZE)
   {
     char_cnt = 0;
-    Debugger.write("Warn comand too large, overwriting");
+    Debugger.write("Warn comand too large, overwriting\n");
   }
-  if (chr == '\n')
+  if (chr0 == '\r' && chr == '\n')
   {
     last_word[char_cnt] = 0;
-    if(last_word[0]!='\r' & last_word[0]!='\n' & last_word[0]!=0) add_cmd(last_word, char_cnt);
+    if(last_word[0]!='\r' && last_word[0]!='\n' && last_word[0]!=0) add_cmd(last_word, char_cnt);
     if (strcmp(last_word, init_ready_cmd)==0)
     {
+      lcd.clear();
       lcd.print("CONFIG..");
       init_ready = 1;
       set_led('B');
@@ -132,10 +149,11 @@ void read_response(void)
       Debugger.println("Ready to receive sms");
       digitalWrite(MBED_LED, HIGH);
       set_led('K');
+      lcd.clear();
       lcd.print("READY!");
     }
     if (strcmp(last_word, in_msg_cmd)==0) msg_received = 1;
-    if (msg_received & last_word[0]!='+' & last_word[0]!='^' & last_word[0]!='\n' & last_word[0]!='\r' & last_word[0]!=0 & last_word[0]=='*')
+    if (msg_received && last_word[0]!='+' && last_word[0]!='^' && last_word[0]!='\n' && last_word[0]!='\r' && last_word[0]!=0 && last_word[0]=='*')
     {
       /* TO DO: Improve this way "detecting" the message */
       // Debugger.print("last_word[0]="); Debugger.println(last_word[0], DEC);
@@ -145,6 +163,7 @@ void read_response(void)
       msg_received = 0;
       // uint8_t n = last_word[1]-'0';
       uint8_t n =(char_cnt<=8)?char_cnt:8;
+      lcd.clear();
       lcd.print(last_word);
       beeps(n, 500);
       set_led('K');
@@ -170,9 +189,11 @@ void add_cmd(char cmd[], uint8_t cmd_sz)
     comands[word_cnt][i] = cmd[i];
   }
   word_cnt++;
-  // Debugger.print("last_word = "); Debugger.println(last_word);
+  Debugger.print("last_word = "); Debugger.println(last_word);
   if (word_cnt==COMANDS_SIZE) word_cnt = 0;
-  print_lisfOfComands();
+  // print_lisfOfComands();
+  // lcd.clear();
+  // lcd.print(last_word);
 }
 
 void add_msg(char msg[], uint8_t msg_sz)
@@ -182,7 +203,7 @@ void add_msg(char msg[], uint8_t msg_sz)
     messages[msg_cnt][i] = msg[i];
   }
   msg_cnt++;
-  // Debugger.print("last_msg = "); Debugger.println(msg);
+  Debugger.print("last_msg = "); Debugger.println(msg);
   if (msg_cnt==MESSGES_SIZE) msg_cnt = 0;
   print_lisfOfMsg();
 }
